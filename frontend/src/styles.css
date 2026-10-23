@@ -69,6 +69,12 @@ h1, h2, p { margin-top: 0; }
 .compact-form { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
 .compact-form input, .compact-form select { flex: 1 1 130px; }
 .account-form input:first-child { flex-basis: 100%; }
+.institution-search { position: relative; flex: 1 1 100%; }
+.institution-search input { width: 100%; }
+.institution-results { position: absolute; z-index: 2; top: calc(100% + 5px); right: 0; left: 0; display: grid; max-height: 260px; overflow: auto; padding: 5px; border: 1px solid #d8deea; border-radius: 10px; background: #fff; box-shadow: 0 14px 30px rgb(32 49 83 / 14%); }
+.institution-results button { display: grid; gap: 3px; border: 0; border-radius: 7px; background: transparent; padding: 10px; text-align: left; }
+.institution-results button:hover { background: #edf1ff; }
+.institution-results small, .institution-results > small { padding: 10px; color: #8993a5; font-size: 12px; }
 .members { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
 .members li { display: flex; align-items: center; gap: 10px; min-height: 54px; border-bottom: 1px solid #eef1f6; }
 .members li > span:nth-child(2) { display: grid; flex: 1; gap: 3px; }

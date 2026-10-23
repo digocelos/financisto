@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/digocelos/financisto/internal/auth"
 	"github.com/digocelos/financisto/internal/config"
 	"github.com/digocelos/financisto/internal/db"
 	"github.com/digocelos/financisto/internal/httpapi"
@@ -30,8 +31,19 @@ func main() {
 	if err := db.ApplyMigrations(ctx, pool); err != nil {
 		log.Fatalf("apply migrations: %v", err)
 	}
+	authService, err := auth.New(ctx, pool, auth.Config{
+		IssuerURL: cfg.OIDCIssuerURL, InternalIssuerURL: cfg.OIDCInternalIssuerURL, AuthorizationURL: cfg.OIDCAuthorizationURL, TokenURL: cfg.OIDCTokenURL, ClientID: cfg.OIDCClientID, ClientSecret: cfg.OIDCClientSecret,
+		RedirectURL: cfg.OIDCRedirectURL, FrontendURL: cfg.FrontendURL, SecureCookies: cfg.SecureCookies,
+	})
+	if err != nil {
+		log.Fatalf("initialize oidc: %v", err)
+	}
 
-	oidcDiscovery := strings.TrimRight(cfg.OIDCIssuerURL, "/") + "/.well-known/openid-configuration"
+	oidcIssuerForAPI := cfg.OIDCIssuerURL
+	if cfg.OIDCInternalIssuerURL != "" {
+		oidcIssuerForAPI = cfg.OIDCInternalIssuerURL
+	}
+	oidcDiscovery := strings.TrimRight(oidcIssuerForAPI, "/") + "/.well-known/openid-configuration"
 	mux := http.NewServeMux()
 	mux.Handle("/healthz", httpapi.NewCORSHandler(cfg.CORSAllowedOrigin, httpapi.NewHealthHandler(pool)))
 	mux.Handle("/readyz", httpapi.NewCORSHandler(cfg.CORSAllowedOrigin, httpapi.NewReadinessHandler(httpapi.ReadinessDependencies{
@@ -39,6 +51,9 @@ func main() {
 		OIDCDiscovery: oidcDiscovery,
 		HTTPClient:    &http.Client{Timeout: 2 * time.Second},
 	})))
+	authRoutes := authService.Routes()
+	mux.Handle("/auth/", httpapi.NewCORSHandler(cfg.CORSAllowedOrigin, authRoutes))
+	mux.Handle("/v1/", httpapi.NewCORSHandler(cfg.CORSAllowedOrigin, authRoutes))
 
 	server := &http.Server{Addr: cfg.HTTPAddr, Handler: mux, ReadHeaderTimeout: 5 * time.Second}
 	log.Printf("financisto API listening on %s (OIDC issuer %s)", cfg.HTTPAddr, cfg.OIDCIssuerURL)

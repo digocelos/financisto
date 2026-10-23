@@ -3,31 +3,46 @@ package config
 import (
 	"fmt"
 	"os"
+	"strconv"
 )
 
 // Config contains runtime settings shared by local and production environments.
 // OIDC is provider-agnostic: local development points at mock-oauth2-server and
 // production points at Google's issuer through environment variables.
 type Config struct {
-	HTTPAddr          string
-	DatabaseURL       string
-	OIDCIssuerURL     string
-	OIDCClientID      string
-	OIDCClientSecret  string
-	OIDCRedirectURL   string
-	CORSAllowedOrigin string
+	HTTPAddr              string
+	DatabaseURL           string
+	OIDCIssuerURL         string
+	OIDCInternalIssuerURL string
+	OIDCAuthorizationURL  string
+	OIDCTokenURL          string
+	OIDCClientID          string
+	OIDCClientSecret      string
+	OIDCRedirectURL       string
+	CORSAllowedOrigin     string
+	FrontendURL           string
+	SecureCookies         bool
 }
 
 func Load() (Config, error) {
 	cfg := Config{
-		HTTPAddr:          valueOrDefault("HTTP_ADDR", ":8080"),
-		DatabaseURL:       os.Getenv("DATABASE_URL"),
-		OIDCIssuerURL:     os.Getenv("OIDC_ISSUER_URL"),
-		OIDCClientID:      os.Getenv("OIDC_CLIENT_ID"),
-		OIDCClientSecret:  os.Getenv("OIDC_CLIENT_SECRET"),
-		OIDCRedirectURL:   os.Getenv("OIDC_REDIRECT_URL"),
-		CORSAllowedOrigin: valueOrDefault("CORS_ALLOWED_ORIGIN", "http://localhost:5173"),
+		HTTPAddr:              valueOrDefault("HTTP_ADDR", ":8080"),
+		DatabaseURL:           os.Getenv("DATABASE_URL"),
+		OIDCIssuerURL:         os.Getenv("OIDC_ISSUER_URL"),
+		OIDCInternalIssuerURL: os.Getenv("OIDC_INTERNAL_ISSUER_URL"),
+		OIDCAuthorizationURL:  os.Getenv("OIDC_AUTHORIZATION_URL"),
+		OIDCTokenURL:          os.Getenv("OIDC_TOKEN_URL"),
+		OIDCClientID:          os.Getenv("OIDC_CLIENT_ID"),
+		OIDCClientSecret:      os.Getenv("OIDC_CLIENT_SECRET"),
+		OIDCRedirectURL:       os.Getenv("OIDC_REDIRECT_URL"),
+		CORSAllowedOrigin:     valueOrDefault("CORS_ALLOWED_ORIGIN", "http://localhost:5173"),
+		FrontendURL:           valueOrDefault("FRONTEND_URL", "http://localhost:5173"),
 	}
+	secureCookies, err := strconv.ParseBool(valueOrDefault("SECURE_COOKIES", "false"))
+	if err != nil {
+		return Config{}, fmt.Errorf("SECURE_COOKIES must be true or false")
+	}
+	cfg.SecureCookies = secureCookies
 
 	for name, value := range map[string]string{
 		"DATABASE_URL":       cfg.DatabaseURL,

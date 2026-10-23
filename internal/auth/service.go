@@ -113,12 +113,21 @@ func New(ctx context.Context, db *pgxpool.Pool, cfg Config) (*Service, error) {
 
 func (s *Service) Routes() http.Handler {
 	mux := http.NewServeMux()
+	s.MountRoutes(mux)
+	return mux
+}
+
+func (s *Service) MountRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /auth/login", s.login)
 	mux.HandleFunc("GET /auth/callback", s.callback)
 	mux.HandleFunc("GET /auth/logout", s.logout)
 	mux.Handle("GET /v1/me", s.RequireUser(http.HandlerFunc(s.me)))
 	s.addFamilyRoutes(mux)
-	return mux
+}
+
+func UserIDFromContext(ctx context.Context) (uuid.UUID, bool) {
+	userID, ok := ctx.Value(userIDKey).(uuid.UUID)
+	return userID, ok
 }
 
 func (s *Service) login(w http.ResponseWriter, r *http.Request) {

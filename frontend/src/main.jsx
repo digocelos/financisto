@@ -9,6 +9,9 @@ function App() {
   const [familyName, setFamilyName] = useState('')
   const [members, setMembers] = useState([])
   const [memberForm, setMemberForm] = useState({ name: '', email: '' })
+  const [catalogs, setCatalogs] = useState({ institutions: [], accountTypes: [] })
+  const [accounts, setAccounts] = useState([])
+  const [accountForm, setAccountForm] = useState({ memberId: '', institutionId: '', accountTypeId: '', name: '', openingBalanceCents: 0 })
   const invitationToken = window.location.pathname.startsWith('/invite/') ? window.location.pathname.split('/')[2] : ''
 
   useEffect(() => {
@@ -35,7 +38,14 @@ function App() {
   }).then((response) => response.ok ? response.json() : [])
 
   useEffect(() => {
-    if (session?.activeFamilyId) loadMembers(session.activeFamilyId).then(setMembers)
+    if (session?.activeFamilyId) {
+      loadMembers(session.activeFamilyId).then((value) => {
+        setMembers(value)
+        if (value[0] && !accountForm.memberId) setAccountForm((current) => ({ ...current, memberId: value[0].id }))
+      })
+      fetch(`${apiURL}/v1/catalogs`, { credentials: 'include' }).then((response) => response.json()).then(setCatalogs)
+      fetch(`${apiURL}/v1/families/${session.activeFamilyId}/accounts`, { credentials: 'include', headers: { 'X-Family-ID': session.activeFamilyId } }).then((response) => response.ok ? response.json() : []).then(setAccounts)
+    }
   }, [session?.activeFamilyId])
 
   const startLogin = (event) => {
@@ -68,6 +78,14 @@ function App() {
     }).then((response) => response.json()).then((invitation) => navigator.clipboard?.writeText(invitation.invitationUrl))
   }
 
+  const addAccount = (event) => {
+    event.preventDefault()
+    fetch(`${apiURL}/v1/families/${session.activeFamilyId}/accounts`, {
+      method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json', 'X-Family-ID': session.activeFamilyId },
+      body: JSON.stringify({ ...accountForm, currency: 'BRL' }),
+    }).then((response) => response.json()).then((account) => setAccounts((current) => [...current, account]))
+  }
+
   return (
     <main className="shell">
       <section className="card" aria-labelledby="title">
@@ -93,6 +111,16 @@ function App() {
             <ul className="members">
               {members.map((member) => <li key={member.id}>{member.name} <small>{member.email}</small>{!member.linked && <button type="button" onClick={() => inviteMember(member.id)}>Convidar</button>}</li>)}
             </ul>
+            <form className="onboarding" onSubmit={addAccount}>
+              <label htmlFor="account-name">Nova conta bancária</label>
+              <input id="account-name" value={accountForm.name} onChange={(event) => setAccountForm({ ...accountForm, name: event.target.value })} placeholder="Conta principal" required />
+              <select value={accountForm.memberId} onChange={(event) => setAccountForm({ ...accountForm, memberId: event.target.value })} required><option value="">Titular</option>{members.map((member) => <option key={member.id} value={member.id}>{member.name}</option>)}</select>
+              <select value={accountForm.institutionId} onChange={(event) => setAccountForm({ ...accountForm, institutionId: event.target.value })} required><option value="">Instituição</option>{catalogs.institutions.map((institution) => <option key={institution.id} value={institution.id}>{institution.name}</option>)}</select>
+              <select value={accountForm.accountTypeId} onChange={(event) => setAccountForm({ ...accountForm, accountTypeId: event.target.value })} required><option value="">Tipo de conta</option>{catalogs.accountTypes.map((type) => <option key={type.id} value={type.id}>{type.name}</option>)}</select>
+              <input type="number" step="0.01" placeholder="Saldo inicial em reais" onChange={(event) => setAccountForm({ ...accountForm, openingBalanceCents: Math.round(Number(event.target.value || 0) * 100) })} />
+              <button type="submit">Cadastrar conta</button>
+            </form>
+            <ul className="members">{accounts.map((account) => <li key={account.id}>{account.name} <small>{account.institution} · R$ {(account.openingBalanceCents / 100).toFixed(2)}</small></li>)}</ul>
             <a href={`${apiURL}/auth/logout`}>Sair</a>
           </section>
         ) : apiStatus === 'online' ? (

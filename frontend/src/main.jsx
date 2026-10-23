@@ -11,6 +11,7 @@ function App() {
   const [catalogs, setCatalogs] = useState({ institutions: [], accountTypes: [] })
   const [accounts, setAccounts] = useState([])
   const [dashboard, setDashboard] = useState(null)
+  const [setupOpen, setSetupOpen] = useState(false)
   const [accountForm, setAccountForm] = useState({ memberId: '', institutionId: '', accountTypeId: '', name: '', openingBalanceCents: 0 })
   const invitationToken = window.location.pathname.startsWith('/invite/') ? window.location.pathname.split('/')[2] : ''
 
@@ -86,51 +87,11 @@ function App() {
     }).then((response) => response.json()).then((account) => setAccounts((current) => [...current, account]))
   }
 
-  return (
-    <main className="shell">
-      <section className="card" aria-labelledby="title">
-        <p className="eyebrow">Controle financeiro familiar</p>
-        <h1 id="title">Financisto</h1>
-        <p>Organize contas, objetivos e decisões financeiras da sua família.</p>
-        {session ? (
-          <section className="session" aria-label="Sessão autenticada">
-            <p>Olá, {session.user.name}.</p>
-            {session.families.length === 0 ? <form className="onboarding" onSubmit={createFamily}><label htmlFor="family-name">Nome da família</label><input id="family-name" value={familyName} onChange={(event) => setFamilyName(event.target.value)} placeholder="Família Vasconcelos" required /><button type="submit">Criar família</button></form> : <>
-            <label htmlFor="active-family">Família ativa</label>
-            <select id="active-family" value={session.activeFamilyId} onChange={switchFamily}>{session.families.map((family) => <option key={family.id} value={family.id}>{family.name}</option>)}</select>
-            {dashboard && <section className="dashboard" aria-label="Resumo financeiro">
-              <div className="metrics"><strong>Saldo atual<br />R$ {(dashboard.currentBalanceCents / 100).toFixed(2)}</strong><strong>Receitas<br />R$ {(dashboard.incomeCents / 100).toFixed(2)}</strong><strong>Despesas<br />R$ {(dashboard.expenseCents / 100).toFixed(2)}</strong></div>
-              <p>Saldo projetado: <strong>R$ {(dashboard.projectedBalanceCents / 100).toFixed(2)}</strong></p>
-            </section>}
-            <form className="onboarding" onSubmit={addMember}>
-              <label htmlFor="member-name">Novo membro</label>
-              <input id="member-name" value={memberForm.name} onChange={(event) => setMemberForm({ ...memberForm, name: event.target.value })} placeholder="Nome" required />
-              <input type="email" value={memberForm.email} onChange={(event) => setMemberForm({ ...memberForm, email: event.target.value })} placeholder="E-mail" required />
-              <button type="submit">Adicionar membro</button>
-            </form>
-            <ul className="members">
-              {members.map((member) => <li key={member.id}>{member.name} <small>{member.email}</small>{!member.linked && <button type="button" onClick={() => inviteMember(member.id)}>Convidar</button>}</li>)}
-            </ul>
-            <form className="onboarding" onSubmit={addAccount}>
-              <label htmlFor="account-name">Nova conta bancária</label>
-              <input id="account-name" value={accountForm.name} onChange={(event) => setAccountForm({ ...accountForm, name: event.target.value })} placeholder="Conta principal" required />
-              <select value={accountForm.memberId} onChange={(event) => setAccountForm({ ...accountForm, memberId: event.target.value })} required><option value="">Titular</option>{members.map((member) => <option key={member.id} value={member.id}>{member.name}</option>)}</select>
-              <select value={accountForm.institutionId} onChange={(event) => setAccountForm({ ...accountForm, institutionId: event.target.value })} required><option value="">Instituição</option>{catalogs.institutions.map((institution) => <option key={institution.id} value={institution.id}>{institution.name}</option>)}</select>
-              <select value={accountForm.accountTypeId} onChange={(event) => setAccountForm({ ...accountForm, accountTypeId: event.target.value })} required><option value="">Tipo de conta</option>{catalogs.accountTypes.map((type) => <option key={type.id} value={type.id}>{type.name}</option>)}</select>
-              <input type="number" step="0.01" placeholder="Saldo inicial em reais" onChange={(event) => setAccountForm({ ...accountForm, openingBalanceCents: Math.round(Number(event.target.value || 0) * 100) })} />
-              <button type="submit">Cadastrar conta</button>
-            </form>
-            <ul className="members">{accounts.map((account) => <li key={account.id}>{account.name} <small>{account.institution} · R$ {(account.openingBalanceCents / 100).toFixed(2)}</small></li>)}</ul>
-            <a href={`${apiURL}/auth/logout`}>Sair</a></>}
-          </section>
-        ) : session === null ? (
-          <form className="onboarding" onSubmit={startLogin}>
-            <button type="submit">{invitationToken ? 'Entrar para aceitar convite' : 'Entrar com Google'}</button>
-          </form>
-        ) : null}
-      </section>
-    </main>
-  )
+  if (session === undefined) return null
+  if (!session) return <main className="auth-shell"><section className="auth-panel"><div className="brand-mark">F</div><p className="eyebrow">Financisto</p><h1>Clareza para as decisões da sua família.</h1><p className="lead">Organize contas, acompanhe objetivos e planeje o próximo passo juntos.</p><button className="google-button" onClick={startLogin}>{invitationToken ? 'Entrar para aceitar convite' : 'Entrar com Google'}</button></section></main>
+  if (session.families.length === 0) return <main className="auth-shell"><section className="auth-panel onboarding-panel"><div className="brand-mark">F</div><p className="eyebrow">Primeiro passo</p><h1>Vamos criar o espaço da sua família.</h1><p className="lead">Escolha um nome para começar a organizar suas finanças.</p><form className="onboarding" onSubmit={createFamily}><label htmlFor="family-name">Nome da família</label><input id="family-name" value={familyName} onChange={(event) => setFamilyName(event.target.value)} placeholder="Família Silva" required /><button className="primary-button" type="submit">Continuar</button></form></section></main>
+  if (!setupOpen) return <main className="workspace"><header className="topbar"><div className="brand-inline"><span className="brand-dot">F</span><strong>Financisto</strong></div><div className="topbar-actions"><select aria-label="Família ativa" value={session.activeFamilyId} onChange={switchFamily}>{session.families.map((family) => <option key={family.id} value={family.id}>{family.name}</option>)}</select><span className="avatar">{session.user.name?.[0] ?? 'U'}</span><a href={`${apiURL}/auth/logout`}>Sair</a></div></header><section className="workspace-content"><div className="welcome"><div><p className="eyebrow">Visão geral</p><h1>Olá, {session.user.name?.split(' ')[0] ?? 'por aqui'}.</h1><p>Acompanhe o que está acontecendo com o dinheiro da família.</p></div><button className="primary-button" type="button" onClick={() => setSetupOpen(true)}>Configurar família</button></div><section className="metrics" aria-label="Resumo financeiro"><article><span>Saldo atual</span><strong>R$ {((dashboard?.currentBalanceCents ?? 0) / 100).toFixed(2)}</strong></article><article><span>Receitas no período</span><strong className="positive">R$ {((dashboard?.incomeCents ?? 0) / 100).toFixed(2)}</strong></article><article><span>Despesas no período</span><strong className="negative">R$ {((dashboard?.expenseCents ?? 0) / 100).toFixed(2)}</strong></article><article><span>Saldo projetado</span><strong>R$ {((dashboard?.projectedBalanceCents ?? 0) / 100).toFixed(2)}</strong></article></section><section className="surface dashboard-empty"><p className="eyebrow">Tudo pronto para começar</p><h2>Seu painel financeiro está vazio.</h2><p>Adicione uma conta bancária e os membros da família para acompanhar saldos, receitas e despesas aqui.</p><button className="primary-button" type="button" onClick={() => setSetupOpen(true)}>Começar configuração</button></section></section></main>
+  return <main className="workspace"><header className="topbar"><div className="brand-inline"><span className="brand-dot">F</span><strong>Financisto</strong></div><div className="topbar-actions"><select aria-label="Família ativa" value={session.activeFamilyId} onChange={switchFamily}>{session.families.map((family) => <option key={family.id} value={family.id}>{family.name}</option>)}</select><span className="avatar">{session.user.name?.[0] ?? 'U'}</span><a href={`${apiURL}/auth/logout`}>Sair</a></div></header><section className="workspace-content"><div className="welcome"><div><p className="eyebrow">Visão geral</p><h1>Olá, {session.user.name.split(' ')[0]}.</h1><p>Acompanhe o que está acontecendo com o dinheiro da família.</p></div></div>{dashboard && <section className="metrics" aria-label="Resumo financeiro"><article><span>Saldo atual</span><strong>R$ {(dashboard.currentBalanceCents / 100).toFixed(2)}</strong></article><article><span>Receitas no período</span><strong className="positive">R$ {(dashboard.incomeCents / 100).toFixed(2)}</strong></article><article><span>Despesas no período</span><strong className="negative">R$ {(dashboard.expenseCents / 100).toFixed(2)}</strong></article><article><span>Saldo projetado</span><strong>R$ {(dashboard.projectedBalanceCents / 100).toFixed(2)}</strong></article></section>}<div className="content-grid"><section className="surface"><div className="section-heading"><div><p className="eyebrow">Pessoas</p><h2>Membros da família</h2></div></div><form className="compact-form" onSubmit={addMember}><input aria-label="Nome do membro" value={memberForm.name} onChange={(event) => setMemberForm({ ...memberForm, name: event.target.value })} placeholder="Nome" required /><input aria-label="E-mail do membro" type="email" value={memberForm.email} onChange={(event) => setMemberForm({ ...memberForm, email: event.target.value })} placeholder="E-mail" required /><button className="primary-button" type="submit">Adicionar</button></form><ul className="members">{members.map((member) => <li key={member.id}><span className="list-avatar">{member.name[0]}</span><span><strong>{member.name}</strong><small>{member.email}</small></span>{!member.linked && <button type="button" onClick={() => inviteMember(member.id)}>Convidar</button>}</li>)}</ul></section><section className="surface"><div className="section-heading"><div><p className="eyebrow">Patrimônio</p><h2>Contas bancárias</h2></div></div><form className="compact-form account-form" onSubmit={addAccount}><input aria-label="Nome da conta" value={accountForm.name} onChange={(event) => setAccountForm({ ...accountForm, name: event.target.value })} placeholder="Nome da conta" required /><select aria-label="Titular" value={accountForm.memberId} onChange={(event) => setAccountForm({ ...accountForm, memberId: event.target.value })} required><option value="">Titular</option>{members.map((member) => <option key={member.id} value={member.id}>{member.name}</option>)}</select><select aria-label="Instituição" value={accountForm.institutionId} onChange={(event) => setAccountForm({ ...accountForm, institutionId: event.target.value })} required><option value="">Instituição</option>{catalogs.institutions.map((institution) => <option key={institution.id} value={institution.id}>{institution.name}</option>)}</select><select aria-label="Tipo" value={accountForm.accountTypeId} onChange={(event) => setAccountForm({ ...accountForm, accountTypeId: event.target.value })} required><option value="">Tipo</option>{catalogs.accountTypes.map((type) => <option key={type.id} value={type.id}>{type.name}</option>)}</select><input aria-label="Saldo inicial" type="number" step="0.01" placeholder="Saldo inicial" onChange={(event) => setAccountForm({ ...accountForm, openingBalanceCents: Math.round(Number(event.target.value || 0) * 100) })} /><button className="primary-button" type="submit">Cadastrar conta</button></form><ul className="members">{accounts.map((account) => <li key={account.id}><span className="list-avatar money">$</span><span><strong>{account.name}</strong><small>{account.institution}</small></span><strong>R$ {(account.openingBalanceCents / 100).toFixed(2)}</strong></li>)}</ul></section></div></section></main>
 }
 
 createRoot(document.getElementById('root')).render(

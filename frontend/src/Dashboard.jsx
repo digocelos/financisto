@@ -11,7 +11,7 @@ export default function Dashboard({ session, apiURL, dashboard, operations, acco
   return (
     <main className="workspace">
       <header className="topbar">
-        <div className="brand-inline"><span className="brand-dot">F</span><strong>Financisto</strong></div>
+        <div className="brand-inline"><span className="brand-dot">F</span><strong>Financisto</strong><nav className="main-nav" aria-label="Navegação principal"><a className="active" href="#dashboard">Dashboard</a><a href="#operations">Lançamentos</a><a href="#planning">Planejamento</a><a href="#accounts">Contas</a></nav></div>
         <div className="topbar-actions"><span className="family-name">{familyName}</span><span className="avatar">{session.user.name?.[0] ?? 'U'}</span><button className="link-button" type="button" onClick={onOpenSetup}>Configurar</button><a href={`${apiURL}/auth/logout`}>Sair</a></div>
       </header>
       <section className="workspace-content">
@@ -22,7 +22,7 @@ export default function Dashboard({ session, apiURL, dashboard, operations, acco
           <article><span>Despesas no período</span><strong className="negative">{formatCents(dashboard?.expenseCents)}</strong></article>
           <article><span>Saldo projetado</span><strong>{formatCents(dashboard?.projectedBalanceCents)}</strong></article>
         </section>
-        <div className="ledger-layout">
+        <div className="ledger-layout" id="operations">
           <section className="surface">
             <div className="section-heading"><div><p className="eyebrow">Novo lançamento</p><h2>Registrar movimento</h2></div></div>
             <form className="operation-form" onSubmit={onAddOperation}>

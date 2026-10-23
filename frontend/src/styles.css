@@ -37,6 +37,9 @@ h1, h2, p { margin-top: 0; }
 .workspace { min-height: 100vh; background: #f5f7fb; }
 .topbar { display: flex; align-items: center; justify-content: space-between; gap: 20px; height: 72px; padding: 0 clamp(20px, 5vw, 72px); border-bottom: 1px solid #e4e8f0; background: #fff; }
 .brand-inline, .topbar-actions { display: flex; align-items: center; gap: 12px; }
+.main-nav { display: flex; align-items: center; gap: 4px; margin-left: 18px; }
+.main-nav a { border-radius: 8px; color: #667085; padding: 8px 10px; font-size: 13px; text-decoration: none; }
+.main-nav a:hover, .main-nav a.active { background: #edf1ff; color: #3159c9; }
 .brand-dot { width: 32px; height: 32px; border-radius: 10px; font-size: 15px; }
 .topbar-actions { color: #667085; font-size: 14px; }
 .topbar select { padding: 8px 10px; }
@@ -93,6 +96,7 @@ h1, h2, p { margin-top: 0; }
   .auth-panel { padding: 40px 28px; }
   .topbar { padding: 0 20px; }
   .topbar-actions select { max-width: 150px; }
+  .main-nav { display: none; }
   .workspace-content { width: min(100% - 28px, 620px); padding-top: 36px; }
   .welcome { align-items: start; flex-direction: column; }
   .metrics { grid-template-columns: repeat(2, 1fr); }

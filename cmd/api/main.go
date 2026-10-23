@@ -13,6 +13,7 @@ import (
 	"github.com/digocelos/financisto/internal/config"
 	"github.com/digocelos/financisto/internal/db"
 	"github.com/digocelos/financisto/internal/httpapi"
+	"github.com/digocelos/financisto/internal/ledger"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -57,6 +58,7 @@ func main() {
 	apiRoutes := http.NewServeMux()
 	authService.MountRoutes(apiRoutes)
 	accounts.NewHandler(pool, authService).MountRoutes(apiRoutes)
+	ledger.NewHandler(pool, authService).MountRoutes(apiRoutes)
 	mux.Handle("/auth/", httpapi.NewCORSHandler(cfg.CORSAllowedOrigin, apiRoutes))
 	mux.Handle("/v1/", httpapi.NewCORSHandler(cfg.CORSAllowedOrigin, apiRoutes))
 

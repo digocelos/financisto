@@ -4,8 +4,7 @@ import './styles.css'
 
 function App() {
   const apiURL = import.meta.env.VITE_API_URL ?? 'http://localhost:8080'
-  const [apiStatus, setApiStatus] = useState('checking')
-  const [session, setSession] = useState(null)
+  const [session, setSession] = useState(undefined)
   const [familyName, setFamilyName] = useState('')
   const [members, setMembers] = useState([])
   const [memberForm, setMemberForm] = useState({ name: '', email: '' })
@@ -16,22 +15,14 @@ function App() {
   const invitationToken = window.location.pathname.startsWith('/invite/') ? window.location.pathname.split('/')[2] : ''
 
   useEffect(() => {
-    fetch(`${apiURL}/healthz`)
-      .then((response) => {
-        if (!response.ok) throw new Error('API unavailable')
-        return response.json()
-      })
-      .then(() => {
-        setApiStatus('online')
-        return fetch(`${apiURL}/v1/me`, { credentials: 'include' })
-      })
+    fetch(`${apiURL}/v1/me`, { credentials: 'include' })
       .then((response) => {
         if (response.ok) return response.json()
         if (response.status === 401) return null
         throw new Error('Session unavailable')
       })
       .then(setSession)
-      .catch(() => setApiStatus('offline'))
+      .catch(() => setSession(null))
   }, [apiURL])
 
   const loadMembers = (familyId) => fetch(`${apiURL}/v1/families/${familyId}/members`, {
@@ -52,9 +43,16 @@ function App() {
 
   const startLogin = (event) => {
     event.preventDefault()
-    const params = new URLSearchParams({ family_name: familyName.trim() })
+    const params = new URLSearchParams()
     if (invitationToken) params.set('invitation_token', invitationToken)
     window.location.assign(`${apiURL}/auth/login?${params}`)
+  }
+
+  const createFamily = (event) => {
+    event.preventDefault()
+    fetch(`${apiURL}/v1/families`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: familyName.trim() }) })
+      .then((response) => response.ok ? fetch(`${apiURL}/v1/me`, { credentials: 'include' }) : response.json().then((error) => Promise.reject(error)))
+      .then((response) => response.json()).then(setSession)
   }
 
   const switchFamily = (event) => {
@@ -94,16 +92,12 @@ function App() {
         <p className="eyebrow">Controle financeiro familiar</p>
         <h1 id="title">Financisto</h1>
         <p>Organize contas, objetivos e decisões financeiras da sua família.</p>
-        <p className={`status status-${apiStatus}`} role="status">
-          API: {apiStatus === 'checking' ? 'verificando…' : apiStatus === 'online' ? 'online' : 'indisponível'}
-        </p>
-        {apiStatus === 'online' && session ? (
+        {session ? (
           <section className="session" aria-label="Sessão autenticada">
             <p>Olá, {session.user.name}.</p>
+            {session.families.length === 0 ? <form className="onboarding" onSubmit={createFamily}><label htmlFor="family-name">Nome da família</label><input id="family-name" value={familyName} onChange={(event) => setFamilyName(event.target.value)} placeholder="Família Vasconcelos" required /><button type="submit">Criar família</button></form> : <>
             <label htmlFor="active-family">Família ativa</label>
-            <select id="active-family" value={session.activeFamilyId} onChange={switchFamily}>
-              {session.families.map((family) => <option key={family.id} value={family.id}>{family.name}</option>)}
-            </select>
+            <select id="active-family" value={session.activeFamilyId} onChange={switchFamily}>{session.families.map((family) => <option key={family.id} value={family.id}>{family.name}</option>)}</select>
             {dashboard && <section className="dashboard" aria-label="Resumo financeiro">
               <div className="metrics"><strong>Saldo atual<br />R$ {(dashboard.currentBalanceCents / 100).toFixed(2)}</strong><strong>Receitas<br />R$ {(dashboard.incomeCents / 100).toFixed(2)}</strong><strong>Despesas<br />R$ {(dashboard.expenseCents / 100).toFixed(2)}</strong></div>
               <p>Saldo projetado: <strong>R$ {(dashboard.projectedBalanceCents / 100).toFixed(2)}</strong></p>
@@ -127,11 +121,10 @@ function App() {
               <button type="submit">Cadastrar conta</button>
             </form>
             <ul className="members">{accounts.map((account) => <li key={account.id}>{account.name} <small>{account.institution} · R$ {(account.openingBalanceCents / 100).toFixed(2)}</small></li>)}</ul>
-            <a href={`${apiURL}/auth/logout`}>Sair</a>
+            <a href={`${apiURL}/auth/logout`}>Sair</a></>}
           </section>
-        ) : apiStatus === 'online' ? (
+        ) : session === null ? (
           <form className="onboarding" onSubmit={startLogin}>
-            {!invitationToken && <><label htmlFor="family-name">Nome da família</label><input id="family-name" value={familyName} onChange={(event) => setFamilyName(event.target.value)} placeholder="Família Vasconcelos" required /></>}
             <button type="submit">{invitationToken ? 'Entrar para aceitar convite' : 'Entrar com Google'}</button>
           </form>
         ) : null}

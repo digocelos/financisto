@@ -21,6 +21,12 @@ type Config struct {
 	OIDCRedirectURL       string
 	CORSAllowedOrigin     string
 	FrontendURL           string
+	InvitationURLBase     string
+	SMTPHost              string
+	SMTPPort              int
+	SMTPUsername          string
+	SMTPPassword          string
+	SMTPFrom              string
 	SecureCookies         bool
 }
 
@@ -37,7 +43,17 @@ func Load() (Config, error) {
 		OIDCRedirectURL:       os.Getenv("OIDC_REDIRECT_URL"),
 		CORSAllowedOrigin:     valueOrDefault("CORS_ALLOWED_ORIGIN", "http://localhost:5173"),
 		FrontendURL:           valueOrDefault("FRONTEND_URL", "http://localhost:5173"),
+		InvitationURLBase:     valueOrDefault("INVITATION_URL_BASE", "http://localhost:5173/invite/"),
+		SMTPHost:              os.Getenv("SMTP_HOST"),
+		SMTPUsername:          os.Getenv("SMTP_USERNAME"),
+		SMTPPassword:          os.Getenv("SMTP_PASSWORD"),
+		SMTPFrom:              os.Getenv("SMTP_FROM"),
 	}
+	smtpPort, err := strconv.Atoi(valueOrDefault("SMTP_PORT", "587"))
+	if err != nil || smtpPort < 1 || smtpPort > 65535 {
+		return Config{}, fmt.Errorf("SMTP_PORT must be a valid port")
+	}
+	cfg.SMTPPort = smtpPort
 	secureCookies, err := strconv.ParseBool(valueOrDefault("SECURE_COOKIES", "false"))
 	if err != nil {
 		return Config{}, fmt.Errorf("SECURE_COOKIES must be true or false")

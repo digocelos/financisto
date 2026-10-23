@@ -37,3 +37,8 @@ h1 { margin: 0 0 1rem; font-size: clamp(2.5rem, 12vw, 4rem); }
 .onboarding input, .onboarding button { border: 1px solid #ccd6e5; border-radius: .65rem; font: inherit; padding: .75rem 1rem; }
 .onboarding button { border-color: #4169e1; background: #4169e1; color: white; cursor: pointer; font-weight: 700; }
 .session { border-top: 1px solid #e4e9f1; padding-top: 1rem; }
+.session select { border: 1px solid #ccd6e5; border-radius: .65rem; font: inherit; padding: .65rem; }
+.members { display: grid; gap: .5rem; margin: 0; padding: 0; list-style: none; }
+.members li { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; border-bottom: 1px solid #eef1f6; padding: .5rem 0; }
+.members small { color: #667085; flex: 1; }
+.members button { border: 0; border-radius: .5rem; background: #e8eefc; color: #3157b7; cursor: pointer; padding: .4rem .65rem; }

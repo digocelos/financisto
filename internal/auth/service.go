@@ -34,16 +34,28 @@ type Config struct {
 	ClientSecret      string
 	RedirectURL       string
 	FrontendURL       string
+	InvitationURLBase string
+	SMTPHost          string
+	SMTPPort          int
+	SMTPUsername      string
+	SMTPPassword      string
+	SMTPFrom          string
 	SecureCookies     bool
 }
 
 type Service struct {
-	db            *pgxpool.Pool
-	oauth         *oauth2.Config
-	verifier      *oidc.IDTokenVerifier
-	httpClient    *http.Client
-	frontendURL   string
-	secureCookies bool
+	db                *pgxpool.Pool
+	oauth             *oauth2.Config
+	verifier          *oidc.IDTokenVerifier
+	httpClient        *http.Client
+	frontendURL       string
+	invitationURLBase string
+	smtpHost          string
+	smtpPort          int
+	smtpUsername      string
+	smtpPassword      string
+	smtpFrom          string
+	secureCookies     bool
 }
 
 type claims struct {
@@ -90,8 +102,11 @@ func New(ctx context.Context, db *pgxpool.Pool, cfg Config) (*Service, error) {
 			RedirectURL:  cfg.RedirectURL,
 			Scopes:       []string{oidc.ScopeOpenID, "profile", "email"},
 		},
-		verifier:      provider.Verifier(&oidc.Config{ClientID: cfg.ClientID}),
-		frontendURL:   cfg.FrontendURL,
+		verifier:          provider.Verifier(&oidc.Config{ClientID: cfg.ClientID}),
+		frontendURL:       cfg.FrontendURL,
+		invitationURLBase: cfg.InvitationURLBase,
+		smtpHost:          cfg.SMTPHost, smtpPort: cfg.SMTPPort, smtpUsername: cfg.SMTPUsername,
+		smtpPassword: cfg.SMTPPassword, smtpFrom: cfg.SMTPFrom,
 		secureCookies: cfg.SecureCookies,
 	}, nil
 }
@@ -102,11 +117,12 @@ func (s *Service) Routes() http.Handler {
 	mux.HandleFunc("GET /auth/callback", s.callback)
 	mux.HandleFunc("GET /auth/logout", s.logout)
 	mux.Handle("GET /v1/me", s.RequireUser(http.HandlerFunc(s.me)))
+	s.addFamilyRoutes(mux)
 	return mux
 }
 
 func (s *Service) login(w http.ResponseWriter, r *http.Request) {
-	state, err := NewOAuthState(strings.TrimSpace(r.URL.Query().Get("family_name")))
+	state, err := NewOAuthState(strings.TrimSpace(r.URL.Query().Get("family_name")), strings.TrimSpace(r.URL.Query().Get("invitation_token")))
 	if err != nil {
 		http.Error(w, "could not start login", http.StatusInternalServerError)
 		return
@@ -155,7 +171,12 @@ func (s *Service) callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID, err := s.upsertUserAndOnboard(r.Context(), identity, state.FamilyName)
+	var userID uuid.UUID
+	if state.InvitationToken != "" {
+		userID, err = s.upsertUserAndAcceptInvitation(r.Context(), identity, state.FamilyName, state.InvitationToken)
+	} else {
+		userID, err = s.upsertUserAndOnboard(r.Context(), identity, state.FamilyName)
+	}
 	if err != nil {
 		http.Error(w, "could not complete onboarding", http.StatusInternalServerError)
 		return

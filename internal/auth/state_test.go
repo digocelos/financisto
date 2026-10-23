@@ -3,7 +3,7 @@ package auth
 import "testing"
 
 func TestOAuthStateRoundTripPreservesFamilyName(t *testing.T) {
-	state, err := NewOAuthState("Família Vasconcelos")
+	state, err := NewOAuthState("Família Vasconcelos", "invite-token")
 	if err != nil {
 		t.Fatalf("NewOAuthState() error = %v", err)
 	}
@@ -17,6 +17,9 @@ func TestOAuthStateRoundTripPreservesFamilyName(t *testing.T) {
 	}
 	if decoded.Nonce == "" {
 		t.Fatal("Nonce should be generated")
+	}
+	if decoded.InvitationToken != "invite-token" {
+		t.Fatalf("InvitationToken = %q", decoded.InvitationToken)
 	}
 }
 

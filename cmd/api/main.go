@@ -33,7 +33,9 @@ func main() {
 	}
 	authService, err := auth.New(ctx, pool, auth.Config{
 		IssuerURL: cfg.OIDCIssuerURL, InternalIssuerURL: cfg.OIDCInternalIssuerURL, AuthorizationURL: cfg.OIDCAuthorizationURL, TokenURL: cfg.OIDCTokenURL, ClientID: cfg.OIDCClientID, ClientSecret: cfg.OIDCClientSecret,
-		RedirectURL: cfg.OIDCRedirectURL, FrontendURL: cfg.FrontendURL, SecureCookies: cfg.SecureCookies,
+		RedirectURL: cfg.OIDCRedirectURL, FrontendURL: cfg.FrontendURL, InvitationURLBase: cfg.InvitationURLBase,
+		SMTPHost: cfg.SMTPHost, SMTPPort: cfg.SMTPPort, SMTPUsername: cfg.SMTPUsername, SMTPPassword: cfg.SMTPPassword, SMTPFrom: cfg.SMTPFrom,
+		SecureCookies: cfg.SecureCookies,
 	})
 	if err != nil {
 		log.Fatalf("initialize oidc: %v", err)

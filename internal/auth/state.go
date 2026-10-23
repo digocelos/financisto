@@ -8,18 +8,20 @@ import (
 )
 
 type OAuthState struct {
-	Nonce      string `json:"nonce"`
-	FamilyName string `json:"family_name"`
+	Nonce           string `json:"nonce"`
+	FamilyName      string `json:"family_name"`
+	InvitationToken string `json:"invitation_token,omitempty"`
 }
 
-func NewOAuthState(familyName string) (string, error) {
+func NewOAuthState(familyName, invitationToken string) (string, error) {
 	nonce := make([]byte, 32)
 	if _, err := rand.Read(nonce); err != nil {
 		return "", fmt.Errorf("generate oauth state: %w", err)
 	}
 	payload, err := json.Marshal(OAuthState{
-		Nonce:      base64.RawURLEncoding.EncodeToString(nonce),
-		FamilyName: familyName,
+		Nonce:           base64.RawURLEncoding.EncodeToString(nonce),
+		FamilyName:      familyName,
+		InvitationToken: invitationToken,
 	})
 	if err != nil {
 		return "", fmt.Errorf("encode oauth state: %w", err)

@@ -7,6 +7,9 @@ function App() {
   const [apiStatus, setApiStatus] = useState('checking')
   const [session, setSession] = useState(null)
   const [familyName, setFamilyName] = useState('')
+  const [members, setMembers] = useState([])
+  const [memberForm, setMemberForm] = useState({ name: '', email: '' })
+  const invitationToken = window.location.pathname.startsWith('/invite/') ? window.location.pathname.split('/')[2] : ''
 
   useEffect(() => {
     fetch(`${apiURL}/healthz`)
@@ -27,10 +30,42 @@ function App() {
       .catch(() => setApiStatus('offline'))
   }, [apiURL])
 
+  const loadMembers = (familyId) => fetch(`${apiURL}/v1/families/${familyId}/members`, {
+    credentials: 'include', headers: { 'X-Family-ID': familyId },
+  }).then((response) => response.ok ? response.json() : [])
+
+  useEffect(() => {
+    if (session?.activeFamilyId) loadMembers(session.activeFamilyId).then(setMembers)
+  }, [session?.activeFamilyId])
+
   const startLogin = (event) => {
     event.preventDefault()
     const params = new URLSearchParams({ family_name: familyName.trim() })
+    if (invitationToken) params.set('invitation_token', invitationToken)
     window.location.assign(`${apiURL}/auth/login?${params}`)
+  }
+
+  const switchFamily = (event) => {
+    const familyId = event.target.value
+    fetch(`${apiURL}/v1/me`, { credentials: 'include', headers: { 'X-Family-ID': familyId } })
+      .then((response) => response.json()).then(setSession)
+  }
+
+  const addMember = (event) => {
+    event.preventDefault()
+    fetch(`${apiURL}/v1/families/${session.activeFamilyId}/members`, {
+      method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json', 'X-Family-ID': session.activeFamilyId },
+      body: JSON.stringify(memberForm),
+    }).then((response) => response.json()).then((member) => {
+      setMembers((current) => [...current, member])
+      setMemberForm({ name: '', email: '' })
+    })
+  }
+
+  const inviteMember = (memberId) => {
+    fetch(`${apiURL}/v1/families/${session.activeFamilyId}/members/${memberId}/invitation`, {
+      method: 'POST', credentials: 'include', headers: { 'X-Family-ID': session.activeFamilyId },
+    }).then((response) => response.json()).then((invitation) => navigator.clipboard?.writeText(invitation.invitationUrl))
   }
 
   return (
@@ -45,14 +80,25 @@ function App() {
         {apiStatus === 'online' && session ? (
           <section className="session" aria-label="Sessão autenticada">
             <p>Olá, {session.user.name}.</p>
-            <p>Família ativa: <strong>{session.families.find((family) => family.id === session.activeFamilyId)?.name}</strong></p>
+            <label htmlFor="active-family">Família ativa</label>
+            <select id="active-family" value={session.activeFamilyId} onChange={switchFamily}>
+              {session.families.map((family) => <option key={family.id} value={family.id}>{family.name}</option>)}
+            </select>
+            <form className="onboarding" onSubmit={addMember}>
+              <label htmlFor="member-name">Novo membro</label>
+              <input id="member-name" value={memberForm.name} onChange={(event) => setMemberForm({ ...memberForm, name: event.target.value })} placeholder="Nome" required />
+              <input type="email" value={memberForm.email} onChange={(event) => setMemberForm({ ...memberForm, email: event.target.value })} placeholder="E-mail" required />
+              <button type="submit">Adicionar membro</button>
+            </form>
+            <ul className="members">
+              {members.map((member) => <li key={member.id}>{member.name} <small>{member.email}</small>{!member.linked && <button type="button" onClick={() => inviteMember(member.id)}>Convidar</button>}</li>)}
+            </ul>
             <a href={`${apiURL}/auth/logout`}>Sair</a>
           </section>
         ) : apiStatus === 'online' ? (
           <form className="onboarding" onSubmit={startLogin}>
-            <label htmlFor="family-name">Nome da família</label>
-            <input id="family-name" value={familyName} onChange={(event) => setFamilyName(event.target.value)} placeholder="Família Vasconcelos" required />
-            <button type="submit">Entrar com Google</button>
+            {!invitationToken && <><label htmlFor="family-name">Nome da família</label><input id="family-name" value={familyName} onChange={(event) => setFamilyName(event.target.value)} placeholder="Família Vasconcelos" required /></>}
+            <button type="submit">{invitationToken ? 'Entrar para aceitar convite' : 'Entrar com Google'}</button>
           </form>
         ) : null}
       </section>

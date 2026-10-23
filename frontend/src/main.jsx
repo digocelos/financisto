@@ -11,6 +11,7 @@ function App() {
   const [memberForm, setMemberForm] = useState({ name: '', email: '' })
   const [catalogs, setCatalogs] = useState({ institutions: [], accountTypes: [] })
   const [accounts, setAccounts] = useState([])
+  const [dashboard, setDashboard] = useState(null)
   const [accountForm, setAccountForm] = useState({ memberId: '', institutionId: '', accountTypeId: '', name: '', openingBalanceCents: 0 })
   const invitationToken = window.location.pathname.startsWith('/invite/') ? window.location.pathname.split('/')[2] : ''
 
@@ -45,6 +46,7 @@ function App() {
       })
       fetch(`${apiURL}/v1/catalogs`, { credentials: 'include' }).then((response) => response.json()).then(setCatalogs)
       fetch(`${apiURL}/v1/families/${session.activeFamilyId}/accounts`, { credentials: 'include', headers: { 'X-Family-ID': session.activeFamilyId } }).then((response) => response.ok ? response.json() : []).then(setAccounts)
+      fetch(`${apiURL}/v1/families/${session.activeFamilyId}/dashboard`, { credentials: 'include', headers: { 'X-Family-ID': session.activeFamilyId } }).then((response) => response.ok ? response.json() : null).then(setDashboard)
     }
   }, [session?.activeFamilyId])
 
@@ -102,6 +104,10 @@ function App() {
             <select id="active-family" value={session.activeFamilyId} onChange={switchFamily}>
               {session.families.map((family) => <option key={family.id} value={family.id}>{family.name}</option>)}
             </select>
+            {dashboard && <section className="dashboard" aria-label="Resumo financeiro">
+              <div className="metrics"><strong>Saldo atual<br />R$ {(dashboard.currentBalanceCents / 100).toFixed(2)}</strong><strong>Receitas<br />R$ {(dashboard.incomeCents / 100).toFixed(2)}</strong><strong>Despesas<br />R$ {(dashboard.expenseCents / 100).toFixed(2)}</strong></div>
+              <p>Saldo projetado: <strong>R$ {(dashboard.projectedBalanceCents / 100).toFixed(2)}</strong></p>
+            </section>}
             <form className="onboarding" onSubmit={addMember}>
               <label htmlFor="member-name">Novo membro</label>
               <input id="member-name" value={memberForm.name} onChange={(event) => setMemberForm({ ...memberForm, name: event.target.value })} placeholder="Nome" required />

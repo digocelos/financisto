@@ -42,3 +42,6 @@ h1 { margin: 0 0 1rem; font-size: clamp(2.5rem, 12vw, 4rem); }
 .members li { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; border-bottom: 1px solid #eef1f6; padding: .5rem 0; }
 .members small { color: #667085; flex: 1; }
 .members button { border: 0; border-radius: .5rem; background: #e8eefc; color: #3157b7; cursor: pointer; padding: .4rem .65rem; }
+.dashboard { border-top: 1px solid #e4e9f1; margin-top: 1rem; padding-top: 1rem; }
+.metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem; }
+.metrics strong { border-radius: .65rem; background: #f4f7fb; padding: .75rem; font-size: .85rem; }

@@ -1,0 +1,27 @@
+{
+  "interactiveLogin": false,
+  "tokenCallbacks": [
+    {
+      "issuerId": "default",
+      "requestMappings": [
+        {
+          "requestParam": "code",
+          "match": "*",
+          "claims": {
+            "sub": "local-user",
+            "email": "local@example.com",
+            "email_verified": true,
+            "name": "Usuário Local"
+          }
+        },
+        {
+          "requestParam": "nonce",
+          "match": "*",
+          "claims": {
+            "nonce": "${nonce}"
+          }
+        }
+      ]
+    }
+  ]
+}

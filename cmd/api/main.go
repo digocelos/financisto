@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/digocelos/financisto/internal/accounts"
 	"github.com/digocelos/financisto/internal/auth"
 	"github.com/digocelos/financisto/internal/config"
 	"github.com/digocelos/financisto/internal/db"
@@ -53,9 +54,11 @@ func main() {
 		OIDCDiscovery: oidcDiscovery,
 		HTTPClient:    &http.Client{Timeout: 2 * time.Second},
 	})))
-	authRoutes := authService.Routes()
-	mux.Handle("/auth/", httpapi.NewCORSHandler(cfg.CORSAllowedOrigin, authRoutes))
-	mux.Handle("/v1/", httpapi.NewCORSHandler(cfg.CORSAllowedOrigin, authRoutes))
+	apiRoutes := http.NewServeMux()
+	authService.MountRoutes(apiRoutes)
+	accounts.NewHandler(pool, authService).MountRoutes(apiRoutes)
+	mux.Handle("/auth/", httpapi.NewCORSHandler(cfg.CORSAllowedOrigin, apiRoutes))
+	mux.Handle("/v1/", httpapi.NewCORSHandler(cfg.CORSAllowedOrigin, apiRoutes))
 
 	server := &http.Server{Addr: cfg.HTTPAddr, Handler: mux, ReadHeaderTimeout: 5 * time.Second}
 	log.Printf("financisto API listening on %s (OIDC issuer %s)", cfg.HTTPAddr, cfg.OIDCIssuerURL)

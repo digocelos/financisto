@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -122,6 +123,7 @@ func (s *Service) MountRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /auth/callback", s.callback)
 	mux.HandleFunc("GET /auth/logout", s.logout)
 	mux.Handle("GET /v1/me", s.RequireUser(http.HandlerFunc(s.me)))
+	mux.Handle("POST /v1/families", s.RequireUser(http.HandlerFunc(s.createFamily)))
 	s.addFamilyRoutes(mux)
 }
 
@@ -184,7 +186,7 @@ func (s *Service) callback(w http.ResponseWriter, r *http.Request) {
 	if state.InvitationToken != "" {
 		userID, err = s.upsertUserAndAcceptInvitation(r.Context(), identity, state.FamilyName, state.InvitationToken)
 	} else {
-		userID, err = s.upsertUserAndOnboard(r.Context(), identity, state.FamilyName)
+		userID, err = s.upsertUser(r.Context(), identity)
 	}
 	if err != nil {
 		http.Error(w, "could not complete onboarding", http.StatusInternalServerError)
@@ -231,7 +233,7 @@ func (s *Service) RequireUser(next http.Handler) http.Handler {
 
 func (s *Service) me(w http.ResponseWriter, r *http.Request) {
 	userID := r.Context().Value(userIDKey).(uuid.UUID)
-	var response meResponse
+	response := meResponse{Families: make([]familySummary, 0)}
 	if err := s.db.QueryRow(r.Context(), `SELECT id, email, name, COALESCE(avatar_url, '') FROM users WHERE id = $1`, userID).Scan(&response.User.ID, &response.User.Email, &response.User.Name, &response.User.AvatarURL); err != nil {
 		httpapi.WriteProblem(w, http.StatusUnauthorized, "authentication required")
 		return
@@ -286,7 +288,7 @@ type familySummary struct {
 	Name string    `json:"name"`
 }
 
-func (s *Service) upsertUserAndOnboard(ctx context.Context, identity claims, familyName string) (uuid.UUID, error) {
+func (s *Service) upsertUser(ctx context.Context, identity claims) (uuid.UUID, error) {
 	tx, err := s.db.Begin(ctx)
 	if err != nil {
 		return uuid.Nil, err
@@ -297,33 +299,65 @@ func (s *Service) upsertUserAndOnboard(ctx context.Context, identity claims, fam
 	if err := tx.QueryRow(ctx, `INSERT INTO users (id, provider_subject, email, name, avatar_url) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (provider_subject) DO UPDATE SET email = EXCLUDED.email, name = EXCLUDED.name, avatar_url = EXCLUDED.avatar_url, updated_at = NOW() RETURNING id`, userID, identity.Subject, identity.Email, identity.Name, nullableString(identity.Picture)).Scan(&userID); err != nil {
 		return uuid.Nil, err
 	}
-	var hasFamily bool
-	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM family_members WHERE user_id = $1 AND archived_at IS NULL)`, userID).Scan(&hasFamily); err != nil {
-		return uuid.Nil, err
-	}
-	if !hasFamily {
-		familyID := uuid.New()
-		memberID := uuid.New()
-		if strings.TrimSpace(familyName) == "" {
-			familyName = "Minha família"
-		}
-		if _, err := tx.Exec(ctx, `INSERT INTO families (id, name) VALUES ($1, $2)`, familyID, familyName); err != nil {
-			return uuid.Nil, err
-		}
-		if _, err := tx.Exec(ctx, `INSERT INTO family_members (id, family_id, user_id, name, email) VALUES ($1, $2, $3, $4, $5)`, memberID, familyID, userID, identity.Name, identity.Email); err != nil {
-			return uuid.Nil, err
-		}
-		defaults := []struct{ name string }{{"Essenciais"}, {"Variáveis"}, {"Discricionários"}, {"Dívidas"}, {"Investimentos"}, {"Objetivos"}}
-		for _, group := range defaults {
-			if _, err := tx.Exec(ctx, `INSERT INTO planning_groups (id, family_id, name) VALUES ($1, $2, $3) ON CONFLICT (family_id, name) DO NOTHING`, uuid.New(), familyID, group.name); err != nil {
-				return uuid.Nil, err
-			}
-		}
-	}
 	if err := tx.Commit(ctx); err != nil {
 		return uuid.Nil, err
 	}
 	return userID, nil
+}
+
+func (s *Service) createFamily(w http.ResponseWriter, r *http.Request) {
+	userID, ok := UserIDFromContext(r.Context())
+	if !ok {
+		httpapi.WriteProblem(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
+	var input struct {
+		Name string `json:"name"`
+	}
+	if json.NewDecoder(r.Body).Decode(&input) != nil || strings.TrimSpace(input.Name) == "" {
+		httpapi.WriteProblem(w, http.StatusBadRequest, "family name is required")
+		return
+	}
+	tx, err := s.db.Begin(r.Context())
+	if err != nil {
+		httpapi.WriteProblem(w, http.StatusInternalServerError, "could not create family")
+		return
+	}
+	defer tx.Rollback(r.Context())
+	var hasFamily bool
+	if err := tx.QueryRow(r.Context(), `SELECT EXISTS (SELECT 1 FROM family_members WHERE user_id=$1 AND archived_at IS NULL)`, userID).Scan(&hasFamily); err != nil {
+		httpapi.WriteProblem(w, http.StatusInternalServerError, "could not create family")
+		return
+	}
+	if hasFamily {
+		httpapi.WriteProblem(w, http.StatusConflict, "user already belongs to a family")
+		return
+	}
+	var email, name string
+	if err := tx.QueryRow(r.Context(), `SELECT email,name FROM users WHERE id=$1`, userID).Scan(&email, &name); err != nil {
+		httpapi.WriteProblem(w, http.StatusUnauthorized, "user not found")
+		return
+	}
+	familyID := uuid.New()
+	if _, err := tx.Exec(r.Context(), `INSERT INTO families(id,name) VALUES($1,$2)`, familyID, strings.TrimSpace(input.Name)); err != nil {
+		httpapi.WriteProblem(w, http.StatusInternalServerError, "could not create family")
+		return
+	}
+	if _, err := tx.Exec(r.Context(), `INSERT INTO family_members(id,family_id,user_id,name,email) VALUES($1,$2,$3,$4,$5)`, uuid.New(), familyID, userID, name, email); err != nil {
+		httpapi.WriteProblem(w, http.StatusInternalServerError, "could not create family")
+		return
+	}
+	for _, group := range []string{"Essenciais", "Variáveis", "Discricionários", "Dívidas", "Investimentos", "Objetivos"} {
+		if _, err := tx.Exec(r.Context(), `INSERT INTO planning_groups(id,family_id,name) VALUES($1,$2,$3)`, uuid.New(), familyID, group); err != nil {
+			httpapi.WriteProblem(w, http.StatusInternalServerError, "could not create family")
+			return
+		}
+	}
+	if err := tx.Commit(r.Context()); err != nil {
+		httpapi.WriteProblem(w, http.StatusInternalServerError, "could not create family")
+		return
+	}
+	httpapi.WriteJSON(w, http.StatusCreated, map[string]any{"id": familyID, "name": strings.TrimSpace(input.Name)})
 }
 
 func randomToken(size int) (string, error) {

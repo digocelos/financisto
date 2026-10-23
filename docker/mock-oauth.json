@@ -11,13 +11,7 @@
             "sub": "local-user",
             "email": "local@example.com",
             "email_verified": true,
-            "name": "Usuário Local"
-          }
-        },
-        {
-          "requestParam": "nonce",
-          "match": "*",
-          "claims": {
+            "name": "Usuário Local",
             "nonce": "${nonce}"
           }
         }

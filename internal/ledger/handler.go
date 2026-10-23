@@ -33,14 +33,16 @@ func (h *Handler) MountRoutes(mux *http.ServeMux) {
 }
 
 type operationRequest struct {
-	Type                 string    `json:"type"`
-	Status               string    `json:"status"`
-	AccountID            uuid.UUID `json:"accountId"`
-	DestinationAccountID uuid.UUID `json:"destinationAccountId"`
-	AmountCents          int64     `json:"amountCents"`
-	Description          string    `json:"description"`
-	EffectiveAt          string    `json:"effectiveAt"`
-	DueAt                string    `json:"dueAt"`
+	Type                 string     `json:"type"`
+	Status               string     `json:"status"`
+	AccountID            uuid.UUID  `json:"accountId"`
+	DestinationAccountID uuid.UUID  `json:"destinationAccountId"`
+	AmountCents          int64      `json:"amountCents"`
+	Description          string     `json:"description"`
+	EffectiveAt          string     `json:"effectiveAt"`
+	DueAt                string     `json:"dueAt"`
+	CategoryID           *uuid.UUID `json:"categoryId"`
+	PlanningGroupID      *uuid.UUID `json:"planningGroupId"`
 }
 
 type operationResponse struct {
@@ -112,6 +114,13 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		httpapi.WriteProblem(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	if input.CategoryID != nil {
+		var nature string
+		if err := tx.QueryRow(r.Context(), `SELECT nature FROM categories WHERE id=$1 AND family_id=$2 AND archived_at IS NULL`, *input.CategoryID, familyID).Scan(&nature); err != nil || (nature != "BOTH" && nature != input.Type) {
+			httpapi.WriteProblem(w, http.StatusBadRequest, "category is incompatible with operation type")
+			return
+		}
+	}
 	opID := uuid.New()
 	status := input.Status
 	if status == "" {
@@ -122,7 +131,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		now := time.Now().UTC()
 		confirmedAt = &now
 	}
-	if _, err := tx.Exec(r.Context(), `INSERT INTO operations (id, family_id, type, status, description, effective_at, due_at, confirmed_at, created_by) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`, opID, familyID, input.Type, status, strings.TrimSpace(input.Description), effectiveAt, dueAt, confirmedAt, userID); err != nil {
+	if _, err := tx.Exec(r.Context(), `INSERT INTO operations (id, family_id, type, status, description, effective_at, due_at, confirmed_at, category_id, planning_group_id, created_by) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`, opID, familyID, input.Type, status, strings.TrimSpace(input.Description), effectiveAt, dueAt, confirmedAt, input.CategoryID, input.PlanningGroupID, userID); err != nil {
 		httpapi.WriteProblem(w, http.StatusInternalServerError, "could not create operation")
 		return
 	}

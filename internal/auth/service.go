@@ -313,6 +313,12 @@ func (s *Service) upsertUserAndOnboard(ctx context.Context, identity claims, fam
 		if _, err := tx.Exec(ctx, `INSERT INTO family_members (id, family_id, user_id, name, email) VALUES ($1, $2, $3, $4, $5)`, memberID, familyID, userID, identity.Name, identity.Email); err != nil {
 			return uuid.Nil, err
 		}
+		defaults := []struct{ name string }{{"Essenciais"}, {"Variáveis"}, {"Discricionários"}, {"Dívidas"}, {"Investimentos"}, {"Objetivos"}}
+		for _, group := range defaults {
+			if _, err := tx.Exec(ctx, `INSERT INTO planning_groups (id, family_id, name) VALUES ($1, $2, $3) ON CONFLICT (family_id, name) DO NOTHING`, uuid.New(), familyID, group.name); err != nil {
+				return uuid.Nil, err
+			}
+		}
 	}
 	if err := tx.Commit(ctx); err != nil {
 		return uuid.Nil, err

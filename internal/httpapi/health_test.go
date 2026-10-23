@@ -31,3 +31,16 @@ func TestCORSAllowsConfiguredFrontendOrigin(t *testing.T) {
 		t.Fatalf("Access-Control-Allow-Origin = %q", got)
 	}
 }
+
+func TestCORSAllowsFamilyContextHeader(t *testing.T) {
+	req := httptest.NewRequest(http.MethodOptions, "/v1/families/family-1/members", nil)
+	req.Header.Set("Origin", "http://localhost:5173")
+	req.Header.Set("Access-Control-Request-Headers", "X-Family-ID")
+	res := httptest.NewRecorder()
+
+	NewCORSHandler("http://localhost:5173", NewHealthHandler(nil)).ServeHTTP(res, req)
+
+	if got := res.Header().Get("Access-Control-Allow-Headers"); got != "Content-Type, Authorization, X-Family-ID" {
+		t.Fatalf("allowed headers = %q", got)
+	}
+}

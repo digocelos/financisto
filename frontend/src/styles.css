@@ -37,6 +37,9 @@ h1, h2, p { margin-top: 0; }
 .workspace { min-height: 100vh; background: #f5f7fb; }
 .topbar { display: flex; align-items: center; justify-content: space-between; gap: 20px; height: 72px; padding: 0 clamp(20px, 5vw, 72px); border-bottom: 1px solid #e4e8f0; background: #fff; }
 .brand-inline, .topbar-actions { display: flex; align-items: center; gap: 12px; }
+.main-nav { display: flex; align-items: center; gap: 4px; margin-left: 18px; }
+.main-nav a { border-radius: 8px; color: #667085; padding: 8px 10px; font-size: 13px; text-decoration: none; }
+.main-nav a:hover, .main-nav a.active { background: #edf1ff; color: #3159c9; }
 .brand-dot { width: 32px; height: 32px; border-radius: 10px; font-size: 15px; }
 .topbar-actions { color: #667085; font-size: 14px; }
 .topbar select { padding: 8px 10px; }
@@ -66,6 +69,12 @@ h1, h2, p { margin-top: 0; }
 .compact-form { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
 .compact-form input, .compact-form select { flex: 1 1 130px; }
 .account-form input:first-child { flex-basis: 100%; }
+.institution-search { position: relative; flex: 1 1 100%; }
+.institution-search input { width: 100%; }
+.institution-results { position: absolute; z-index: 2; top: calc(100% + 5px); right: 0; left: 0; display: grid; max-height: 260px; overflow: auto; padding: 5px; border: 1px solid #d8deea; border-radius: 10px; background: #fff; box-shadow: 0 14px 30px rgb(32 49 83 / 14%); }
+.institution-results button { display: grid; gap: 3px; border: 0; border-radius: 7px; background: transparent; padding: 10px; text-align: left; }
+.institution-results button:hover { background: #edf1ff; }
+.institution-results small, .institution-results > small { padding: 10px; color: #8993a5; font-size: 12px; }
 .members { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
 .members li { display: flex; align-items: center; gap: 10px; min-height: 54px; border-bottom: 1px solid #eef1f6; }
 .members li > span:nth-child(2) { display: grid; flex: 1; gap: 3px; }
@@ -93,6 +102,7 @@ h1, h2, p { margin-top: 0; }
   .auth-panel { padding: 40px 28px; }
   .topbar { padding: 0 20px; }
   .topbar-actions select { max-width: 150px; }
+  .main-nav { display: none; }
   .workspace-content { width: min(100% - 28px, 620px); padding-top: 36px; }
   .welcome { align-items: start; flex-direction: column; }
   .metrics { grid-template-columns: repeat(2, 1fr); }

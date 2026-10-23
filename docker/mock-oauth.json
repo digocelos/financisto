@@ -1,17 +1,17 @@
 {
-  "interactiveLogin": false,
+  "interactiveLogin": true,
   "tokenCallbacks": [
     {
       "issuerId": "default",
       "requestMappings": [
         {
-          "requestParam": "code",
-          "match": "*",
+          "requestParam": "subject",
+          "match": ".*",
           "claims": {
-            "sub": "local-user",
-            "email": "local@example.com",
+            "sub": "${subject}",
+            "email": "${subject}@example.com",
             "email_verified": true,
-            "name": "Usuário Local",
+            "name": "${subject}",
             "nonce": "${nonce}"
           }
         }

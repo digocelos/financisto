@@ -9,6 +9,7 @@ import (
 	"github.com/digocelos/financisto/internal/auth"
 	"github.com/digocelos/financisto/internal/httpapi"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -73,7 +74,20 @@ func (h *Handler) familyID(r *http.Request) (uuid.UUID, bool) {
 
 func (h *Handler) catalogs(w http.ResponseWriter, r *http.Request) {
 	var institutions []map[string]any
-	rows, err := h.db.Query(r.Context(), `SELECT id, name, COALESCE(icon_url, '') FROM financial_institutions WHERE active ORDER BY name`)
+	query := strings.TrimSpace(r.URL.Query().Get("query"))
+	if query != "" && len([]rune(query)) < 3 {
+		httpapi.WriteProblem(w, http.StatusBadRequest, "institution query must contain at least 3 characters")
+		return
+	}
+	institutionQuery := `SELECT id, name, COALESCE(icon_url, ''), COALESCE(bank_code, ''), COALESCE(ispb, '') FROM financial_institutions WHERE active ORDER BY name`
+	var rows pgx.Rows
+	var err error
+	if query == "" {
+		rows, err = h.db.Query(r.Context(), institutionQuery)
+	} else {
+		institutionQuery = `SELECT id, name, COALESCE(icon_url, ''), COALESCE(bank_code, ''), COALESCE(ispb, '') FROM financial_institutions WHERE active AND (name ILIKE $1 OR COALESCE(bank_code, '') ILIKE $1 OR COALESCE(ispb, '') ILIKE $1) ORDER BY name LIMIT 30`
+		rows, err = h.db.Query(r.Context(), institutionQuery, "%"+query+"%")
+	}
 	if err != nil {
 		httpapi.WriteProblem(w, http.StatusInternalServerError, "could not load catalogs")
 		return
@@ -81,12 +95,12 @@ func (h *Handler) catalogs(w http.ResponseWriter, r *http.Request) {
 	defer rows.Close()
 	for rows.Next() {
 		var id uuid.UUID
-		var name, icon string
-		if err := rows.Scan(&id, &name, &icon); err != nil {
+		var name, icon, bankCode, ispb string
+		if err := rows.Scan(&id, &name, &icon, &bankCode, &ispb); err != nil {
 			httpapi.WriteProblem(w, http.StatusInternalServerError, "could not load catalogs")
 			return
 		}
-		institutions = append(institutions, map[string]any{"id": id, "name": name, "iconUrl": icon})
+		institutions = append(institutions, map[string]any{"id": id, "name": name, "iconUrl": icon, "bankCode": bankCode, "ispb": ispb})
 	}
 	var types []map[string]any
 	rows, err = h.db.Query(r.Context(), `SELECT id, code, name FROM account_types WHERE active ORDER BY name`)

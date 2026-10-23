@@ -1,9 +1,6 @@
 package config
 
-import (
-	"os"
-	"testing"
-)
+import "testing"
 
 func TestLoadReadsOIDCSettingsFromEnvironment(t *testing.T) {
 	t.Setenv("OIDC_ISSUER_URL", "http://mock-oauth2-server:8080/default")
@@ -47,5 +44,4 @@ func TestLoadRejectsMissingRequiredSettings(t *testing.T) {
 			}
 		})
 	}
-	_ = os.Getenv
 }

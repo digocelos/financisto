@@ -19,3 +19,15 @@ func TestHealthzReturnsOKWithoutDependencies(t *testing.T) {
 		t.Fatalf("body = %q", got)
 	}
 }
+
+func TestCORSAllowsConfiguredFrontendOrigin(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
+	req.Header.Set("Origin", "http://localhost:5173")
+	res := httptest.NewRecorder()
+
+	NewCORSHandler("http://localhost:5173", NewHealthHandler(nil)).ServeHTTP(res, req)
+
+	if got := res.Header().Get("Access-Control-Allow-Origin"); got != "http://localhost:5173" {
+		t.Fatalf("Access-Control-Allow-Origin = %q", got)
+	}
+}

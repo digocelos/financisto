@@ -9,22 +9,24 @@ import (
 // OIDC is provider-agnostic: local development points at mock-oauth2-server and
 // production points at Google's issuer through environment variables.
 type Config struct {
-	HTTPAddr         string
-	DatabaseURL      string
-	OIDCIssuerURL    string
-	OIDCClientID     string
-	OIDCClientSecret string
-	OIDCRedirectURL  string
+	HTTPAddr          string
+	DatabaseURL       string
+	OIDCIssuerURL     string
+	OIDCClientID      string
+	OIDCClientSecret  string
+	OIDCRedirectURL   string
+	CORSAllowedOrigin string
 }
 
 func Load() (Config, error) {
 	cfg := Config{
-		HTTPAddr:         valueOrDefault("HTTP_ADDR", ":8080"),
-		DatabaseURL:      os.Getenv("DATABASE_URL"),
-		OIDCIssuerURL:    os.Getenv("OIDC_ISSUER_URL"),
-		OIDCClientID:     os.Getenv("OIDC_CLIENT_ID"),
-		OIDCClientSecret: os.Getenv("OIDC_CLIENT_SECRET"),
-		OIDCRedirectURL:  os.Getenv("OIDC_REDIRECT_URL"),
+		HTTPAddr:          valueOrDefault("HTTP_ADDR", ":8080"),
+		DatabaseURL:       os.Getenv("DATABASE_URL"),
+		OIDCIssuerURL:     os.Getenv("OIDC_ISSUER_URL"),
+		OIDCClientID:      os.Getenv("OIDC_CLIENT_ID"),
+		OIDCClientSecret:  os.Getenv("OIDC_CLIENT_SECRET"),
+		OIDCRedirectURL:   os.Getenv("OIDC_REDIRECT_URL"),
+		CORSAllowedOrigin: valueOrDefault("CORS_ALLOWED_ORIGIN", "http://localhost:5173"),
 	}
 
 	for name, value := range map[string]string{

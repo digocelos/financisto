@@ -33,12 +33,12 @@ func main() {
 
 	oidcDiscovery := strings.TrimRight(cfg.OIDCIssuerURL, "/") + "/.well-known/openid-configuration"
 	mux := http.NewServeMux()
-	mux.Handle("/healthz", httpapi.NewHealthHandler(pool))
-	mux.Handle("/readyz", httpapi.NewReadinessHandler(httpapi.ReadinessDependencies{
+	mux.Handle("/healthz", httpapi.NewCORSHandler(cfg.CORSAllowedOrigin, httpapi.NewHealthHandler(pool)))
+	mux.Handle("/readyz", httpapi.NewCORSHandler(cfg.CORSAllowedOrigin, httpapi.NewReadinessHandler(httpapi.ReadinessDependencies{
 		Database:      pool,
 		OIDCDiscovery: oidcDiscovery,
 		HTTPClient:    &http.Client{Timeout: 2 * time.Second},
-	}))
+	})))
 
 	server := &http.Server{Addr: cfg.HTTPAddr, Handler: mux, ReadHeaderTimeout: 5 * time.Second}
 	log.Printf("financisto API listening on %s (OIDC issuer %s)", cfg.HTTPAddr, cfg.OIDCIssuerURL)

@@ -10,6 +10,7 @@ import (
 
 	"github.com/digocelos/financisto/internal/accounts"
 	"github.com/digocelos/financisto/internal/auth"
+	"github.com/digocelos/financisto/internal/cards"
 	"github.com/digocelos/financisto/internal/config"
 	"github.com/digocelos/financisto/internal/dashboard"
 	"github.com/digocelos/financisto/internal/db"
@@ -60,6 +61,7 @@ func main() {
 	apiRoutes := http.NewServeMux()
 	authService.MountRoutes(apiRoutes)
 	accounts.NewHandler(pool, authService).MountRoutes(apiRoutes)
+	cards.NewHandler(pool, authService).MountRoutes(apiRoutes)
 	ledger.NewHandler(pool, authService).MountRoutes(apiRoutes)
 	dashboard.NewHandler(pool, authService).MountRoutes(apiRoutes)
 	planning.NewHandler(pool, authService).MountRoutes(apiRoutes)

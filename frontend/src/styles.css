@@ -97,6 +97,18 @@ h1, h2, p { margin-top: 0; }
 .empty-state { padding: 40px 12px; text-align: center; color: #667085; }
 .empty-state p { margin-bottom: 6px; color: #344054; font-weight: 700; }
 .empty-state small { line-height: 1.5; }
+.cards-area { margin-top: 36px; }
+.cards-layout { display: grid; grid-template-columns: minmax(260px, .75fr) minmax(0, 1.25fr); gap: 18px; }
+.card-form, .purchase-form { display: grid; gap: 12px; }
+.card-form h3, .purchase-form h3 { margin: 0 0 4px; font-size: 1rem; }
+.card-form input, .card-form select, .purchase-form input, .purchase-form select { min-width: 0; border: 1px solid #d8deea; border-radius: 9px; padding: 11px 12px; }
+.cards-list { display: grid; gap: 12px; }
+.card-item { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+.card-item div { display: grid; gap: 5px; }
+.card-item small { color: #8993a5; font-size: 12px; }
+.card-item b { font-size: 1.35rem; }
+.secondary-button { border: 1px solid #d8deea; border-radius: 9px; background: #fff; color: #3159c9; padding: 9px 12px; font-weight: 700; }
+.purchase-form { margin-top: 18px; }
 
 @media (max-width: 780px) {
   .auth-panel { padding: 40px 28px; }
@@ -108,4 +120,5 @@ h1, h2, p { margin-top: 0; }
   .metrics { grid-template-columns: repeat(2, 1fr); }
   .content-grid { grid-template-columns: 1fr; }
   .ledger-layout { grid-template-columns: 1fr; }
+  .cards-layout { grid-template-columns: 1fr; }
 }

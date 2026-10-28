@@ -1,10 +1,11 @@
 import { formatCents, operationStatuses, operationTypes } from './operations.js'
+import Cards from './Cards.jsx'
 
 function operationAmount(operation) {
   return operation.entries?.[0]?.amountCents ?? 0
 }
 
-export default function Dashboard({ session, apiURL, dashboard, operations, accounts, operationForm, setOperationForm, onAddOperation, onDeleteOperation, onUpdateOperationStatus, onOpenSetup }) {
+export default function Dashboard({ session, apiURL, dashboard, operations, accounts, cards, members, cardForm, setCardForm, operationForm, setOperationForm, onAddOperation, onDeleteOperation, onUpdateOperationStatus, onAddCard, onAddPurchase, onOpenSetup }) {
   const setField = (field) => (event) => setOperationForm((current) => ({ ...current, [field]: event.target.value }))
   const familyName = session.families.find((family) => family.id === session.activeFamilyId)?.name
 
@@ -39,6 +40,7 @@ export default function Dashboard({ session, apiURL, dashboard, operations, acco
             {operations.length === 0 ? <div className="empty-state"><p>Nenhum lançamento registrado.</p><small>Adicione sua primeira receita, despesa ou transferência.</small></div> : <ul className="operations-list">{operations.map((operation) => { const amount = operationAmount(operation); return <li key={operation.id}><div className={`operation-icon ${amount >= 0 ? 'income' : 'expense'}`}>{amount >= 0 ? '↑' : '↓'}</div><div className="operation-info"><strong>{operation.description}</strong><small>{new Date(operation.effectiveAt).toLocaleDateString('pt-BR')}</small></div><strong className={amount >= 0 ? 'positive' : 'negative'}>{formatCents(Math.abs(amount))}</strong><select className="operation-status" aria-label={`Status de ${operation.description}`} value={operation.status} onChange={(event) => onUpdateOperationStatus(operation, event.target.value)}>{operationStatuses.map((status) => <option key={status.value} value={status.value}>{status.label}</option>)}</select><button className="icon-button" type="button" aria-label={`Excluir ${operation.description}`} onClick={() => onDeleteOperation(operation)}>Excluir</button></li> })}</ul>}
           </section>
         </div>
+        <Cards cards={cards} members={members} cardForm={cardForm} setCardForm={setCardForm} onAddCard={onAddCard} onAddPurchase={onAddPurchase} />
       </section>
     </main>
   )

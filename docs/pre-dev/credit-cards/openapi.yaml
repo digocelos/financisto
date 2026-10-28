@@ -1,0 +1,181 @@
+# approved: automatic 2026-10-27
+openapi: 3.1.0
+info:
+  title: Financisto Credit Cards API
+  version: 1.0.0
+security:
+  - sessionCookie: []
+paths:
+  /v1/families/{familyID}/cards:
+    parameters:
+      - $ref: '#/components/parameters/FamilyID'
+    get:
+      operationId: listCards
+      summary: List cards
+      responses:
+        '200':
+          description: Cards
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Card' } }
+        '401': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    post:
+      operationId: createCard
+      summary: Create a card
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CardCreate' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Card' }
+        '400': { $ref: '#/components/responses/Error' }
+  /v1/families/{familyID}/cards/{cardID}/purchases:
+    parameters:
+      - $ref: '#/components/parameters/FamilyID'
+      - $ref: '#/components/parameters/CardID'
+    get:
+      operationId: listCardPurchases
+      summary: List purchases
+      responses:
+        '200':
+          description: Purchases
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Purchase' } }
+    post:
+      operationId: createCardPurchase
+      summary: Create a purchase
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PurchaseCreate' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Purchase' }
+        '400': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /v1/families/{familyID}/cards/{cardID}/invoices:
+    parameters:
+      - $ref: '#/components/parameters/FamilyID'
+      - $ref: '#/components/parameters/CardID'
+    get:
+      operationId: listCardInvoices
+      summary: List invoices
+      responses:
+        '200':
+          description: Invoices
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Invoice' } }
+  /v1/families/{familyID}/cards/{cardID}/invoices/{invoiceID}/payments:
+    parameters:
+      - $ref: '#/components/parameters/FamilyID'
+      - $ref: '#/components/parameters/CardID'
+      - $ref: '#/components/parameters/InvoiceID'
+    post:
+      operationId: payCardInvoice
+      summary: Pay an invoice from a bank account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PaymentCreate' }
+      responses:
+        '201':
+          description: Payment created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Payment' }
+        '400': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+components:
+  securitySchemes:
+    sessionCookie: { type: apiKey, in: cookie, name: financisto_session }
+  parameters:
+    FamilyID: { name: familyID, in: path, required: true, schema: { type: string, format: uuid } }
+    CardID: { name: cardID, in: path, required: true, schema: { type: string, format: uuid } }
+    InvoiceID: { name: invoiceID, in: path, required: true, schema: { type: string, format: uuid } }
+  schemas:
+    CardCreate:
+      type: object
+      required: [memberId, name, limitCents, closingDay, dueDay]
+      properties:
+        memberId: { type: string, format: uuid }
+        name: { type: string, minLength: 1, maxLength: 120 }
+        limitCents: { type: integer, minimum: 1 }
+        closingDay: { type: integer, minimum: 1, maximum: 31 }
+        dueDay: { type: integer, minimum: 1, maximum: 31 }
+    Card:
+      allOf:
+        - $ref: '#/components/schemas/CardCreate'
+        - type: object
+          required: [id, availableLimitCents, committedLimitCents]
+          properties:
+            id: { type: string, format: uuid }
+            availableLimitCents: { type: integer }
+            committedLimitCents: { type: integer }
+    PurchaseCreate:
+      type: object
+      required: [description, purchasedAt, principalCents, installmentCount, installmentCents]
+      properties:
+        description: { type: string, minLength: 1, maxLength: 240 }
+        purchasedAt: { type: string, format: date }
+        principalCents: { type: integer, minimum: 1 }
+        installmentCount: { type: integer, minimum: 1, maximum: 240 }
+        installmentCents: { type: integer, minimum: 1 }
+    Purchase:
+      allOf:
+        - $ref: '#/components/schemas/PurchaseCreate'
+        - type: object
+          required: [id, financedTotalCents, interestCents]
+          properties:
+            id: { type: string, format: uuid }
+            financedTotalCents: { type: integer }
+            interestCents: { type: integer }
+    Invoice:
+      type: object
+      required: [id, referenceMonth, totalCents, status]
+      properties:
+        id: { type: string, format: uuid }
+        referenceMonth: { type: string, pattern: '^\\d{4}-\\d{2}$' }
+        totalCents: { type: integer }
+        status: { type: string, enum: [OPEN, CLOSED, PAID, PARTIALLY_PAID] }
+    PaymentCreate:
+      type: object
+      required: [accountId, amountCents]
+      properties:
+        accountId: { type: string, format: uuid }
+        amountCents: { type: integer, minimum: 1 }
+        idempotencyKey: { type: string, maxLength: 100 }
+    Payment:
+      type: object
+      required: [id, invoiceId, accountId, amountCents]
+      properties:
+        id: { type: string, format: uuid }
+        invoiceId: { type: string, format: uuid }
+        accountId: { type: string, format: uuid }
+        amountCents: { type: integer }
+    Error:
+      type: object
+      required: [code, title, message]
+      properties:
+        code: { type: string }
+        title: { type: string }
+        message: { type: string }
+        fields: { type: object, additionalProperties: { type: string } }
+  responses:
+    Error:
+      description: Problem response
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
